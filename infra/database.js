@@ -19,7 +19,7 @@ async function query(queryObject) {
   });
 
   try {
-    const result = await pool.query(queryObject);
+    const result = await client.query(queryObject);
     return result;
   } catch (error) {
     console.error("Database query error:", error);
