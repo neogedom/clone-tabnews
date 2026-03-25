@@ -15,7 +15,7 @@ export default async function migrations(request, response) {
   };
 
   if (request.method !== "GET" && request.method !== "POST") {
-    console.error(`Método ${request.method} para /api/v1/migrations`);
+    console.error(`Método ${request.method} não permitido para /api/v1/migrations`);
     await dbClient.end();
     return response.status(405).end();
   }
