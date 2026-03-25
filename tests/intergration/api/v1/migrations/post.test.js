@@ -15,6 +15,7 @@ test("POST to /api/v1/migrations should return 200 and migrations should be appl
     method: "POST",
   });
   expect(response1.status).toBe(201);
+  expect(response1.status).toBe(201);
 
   const responseBody = await response1.json();
 

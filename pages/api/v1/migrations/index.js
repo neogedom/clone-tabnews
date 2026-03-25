@@ -14,6 +14,12 @@ export default async function migrations(request, response) {
     schema: "public",
   };
 
+  if (request.method !== "GET" && request.method !== "POST") {
+    console.error(`Método ${request.method} para /api/v1/migrations`);
+    await dbClient.end();
+    return response.status(405).end();
+  }
+
   if (request.method === "GET") {
     const pendingMigrations = await migrationRunner(defaultMigrationOptions);
     await dbClient.end();
@@ -34,6 +40,4 @@ export default async function migrations(request, response) {
 
     return response.status(200).json(migratedMigrations);
   }
-
-  return response.status(405).end();
 }
