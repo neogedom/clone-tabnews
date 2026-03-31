@@ -3,41 +3,62 @@ import { join } from "node:path";
 import database from "infra/database";
 
 export default async function migrations(request, response) {
-  const dbClient = await database.getNewClient();
-  const defaultMigrationOptions = {
-    dbClient: dbClient,
-    dryRun: true,
-    dir: join("infra", "migrations"),
-    direction: "up",
-    verbose: true,
-    migrationsTable: "pgmigrations",
-    schema: "public",
-  };
+  let dbClient;
+  try {
+    dbClient = await database.getNewClient();
 
-  if (request.method !== "GET" && request.method !== "POST") {
-    console.error(`Método ${request.method} não permitido para /api/v1/migrations`);
-    await dbClient.end();
-    return response.status(405).end();
-  }
+    const defaultMigrationOptions = {
+      dbClient: dbClient,
+      dryRun: true,
+      dir: join("infra", "migrations"),
+      direction: "up",
+      verbose: true,
+      migrationsTable: "pgmigrations",
+      schema: "public",
+    };
 
-  if (request.method === "GET") {
-    const pendingMigrations = await migrationRunner(defaultMigrationOptions);
-    await dbClient.end();
-    return response.status(200).json(pendingMigrations);
-  }
+    const allowedMethods = ["GET", "POST"];
 
-  if (request.method === "POST") {
-    const migratedMigrations = await migrationRunner({
-      ...defaultMigrationOptions,
-      dryRun: false,
-    });
-
-    await dbClient.end();
-
-    if (migratedMigrations.length > 0) {
-      return response.status(201).json(migratedMigrations);
+    if (!allowedMethods.includes(request.method)) {
+      console.error(
+        `Método ${request.method} não permitido para /api/v1/migrations`,
+      );
+      if (dbClient) {
+        await dbClient.end();
+      }
+      return response.status(405).end();
     }
 
-    return response.status(200).json(migratedMigrations);
+    if (request.method === "GET") {
+      const pendingMigrations = await migrationRunner(defaultMigrationOptions);
+      if (dbClient) {
+        await dbClient.end();
+      }
+      return response.status(200).json(pendingMigrations);
+    }
+
+    if (request.method === "POST") {
+      const migratedMigrations = await migrationRunner({
+        ...defaultMigrationOptions,
+        dryRun: false,
+      });
+
+      if (dbClient) {
+        await dbClient.end();
+      }
+
+      if (migratedMigrations.length > 0) {
+        return response.status(201).json(migratedMigrations);
+      }
+
+      return response.status(200).json(migratedMigrations);
+    }
+  } catch (error) {
+    console.error("Erro ao executar migrações:", error);
+    return response.status(500).json({ error: "Erro ao executar migrações" });
+  } finally {
+    if (dbClient) {
+      await dbClient.end();
+    }
   }
 }
